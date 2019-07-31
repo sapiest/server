@@ -335,6 +335,8 @@ btr_pcur_restore_position_func(
 			}
 			return(FALSE);
 		}
+	default:
+		break;
 	}
 
 	/* If optimistic restoration did not succeed, open the cursor anew */
