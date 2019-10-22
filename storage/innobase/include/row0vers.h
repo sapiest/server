@@ -81,6 +81,7 @@ row_vers_old_has_index_entry(
 	const dtuple_t*		ientry,
 	roll_ptr_t		roll_ptr,
 	trx_id_t		trx_id,
+	dberr_t&		err,
 	purge_vcol_info_t*	vcol_info=NULL);
 
 /*****************************************************************//**
