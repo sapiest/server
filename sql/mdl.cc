@@ -24,6 +24,9 @@
 #include <mysql/plugin.h>
 #include <mysql/service_thd_wait.h>
 #include <mysql/psi/mysql_stage.h>
+
+#include <array>
+
 #include <tpool.h>
 #include <pfs_metadata_provider.h>
 #include <mysql/psi/mysql_mdl.h>
@@ -349,19 +352,22 @@ public:
                      I_P_List_fast_push_back<MDL_ticket> >
             List;
     operator const List &() const { return m_list; }
-    Ticket_list() :m_bitmap(0) {}
+
+    Ticket_list() :m_bitmap(0)
+    {
+      m_type_counters.fill(0);
+    }
 
     void add_ticket(MDL_ticket *ticket);
     void remove_ticket(MDL_ticket *ticket);
     bool is_empty() const { return m_list.is_empty(); }
     bitmap_t bitmap() const { return m_bitmap; }
   private:
-    void clear_bit_if_not_in_list(enum_mdl_type type);
-  private:
     /** List of tickets. */
     List m_list;
     /** Bitmap of types of tickets in this list. */
     bitmap_t m_bitmap;
+    std::array<uint32_t, MDL_BACKUP_END> m_type_counters;
   };
 
   typedef Ticket_list::List::Iterator Ticket_iterator;
@@ -1202,28 +1208,6 @@ MDL_wait::timed_wait(MDL_context_owner *owner, struct timespec *abs_timeout,
   DBUG_RETURN(result);
 }
 
-
-/**
-  Clear bit corresponding to the type of metadata lock in bitmap representing
-  set of such types if list of tickets does not contain ticket with such type.
-
-  @param[in,out]  bitmap  Bitmap representing set of types of locks.
-  @param[in]      list    List to inspect.
-  @param[in]      type    Type of metadata lock to look up in the list.
-*/
-
-void MDL_lock::Ticket_list::clear_bit_if_not_in_list(enum_mdl_type type)
-{
-  MDL_lock::Ticket_iterator it(m_list);
-  const MDL_ticket *ticket;
-
-  while ((ticket= it++))
-    if (ticket->get_type() == type)
-      return;
-  m_bitmap&= ~ MDL_BIT(type);
-}
-
-
 /**
   Add ticket to MDL_lock's list of waiting requests and
   update corresponding bitmap of lock types.
@@ -1275,7 +1259,9 @@ void MDL_lock::Ticket_list::add_ticket(MDL_ticket *ticket)
     */
     m_list.push_back(ticket);
   }
-  m_bitmap|= MDL_BIT(ticket->get_type());
+  auto type = ticket->get_type();
+  m_bitmap|= MDL_BIT(type);
+  m_type_counters[type]++;
 }
 
 
@@ -1297,7 +1283,10 @@ void MDL_lock::Ticket_list::remove_ticket(MDL_ticket *ticket)
     type early without performing full iteration through the list.
     So this method should not be too expensive.
   */
-  clear_bit_if_not_in_list(ticket->get_type());
+  const auto type = ticket->get_type();
+  m_type_counters[type]--;
+  if (m_type_counters[type] == 0)
+    m_bitmap&= ~MDL_BIT(type);
 }
 
 
