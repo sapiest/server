@@ -974,6 +974,7 @@ send_result_message:
       protocol->store(STRING_WITH_LEN("status"), system_charset_info);
       protocol->store(STRING_WITH_LEN("Operation failed"),
                       system_charset_info);
+      fatal_error=1;
       break;
 
     case HA_ADMIN_REJECT:
@@ -1167,8 +1168,10 @@ send_result_message:
         query_cache_invalidate3(thd, table, 0);
       }
     }
+    if (fatal_error)
+      goto err;
     /* Error path, a admin command failed. */
-    if (thd->transaction_rollback_request || fatal_error)
+    if (thd->transaction_rollback_request)
     {
       /*
         Unlikely, but transaction rollback was requested by one of storage

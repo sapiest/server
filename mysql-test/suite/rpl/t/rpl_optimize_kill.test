@@ -1,0 +1,23 @@
+--source include/have_innodb.inc
+--source include/not_embedded.inc
+--source include/have_binlog_format_row.inc
+--source include/master-slave.inc
+
+CREATE TABLE t1(a INT PRIMARY KEY, data VARCHAR(30000)) ENGINE=INNODB;
+--let $i=1000
+while ($i)
+{
+eval INSERT INTO t1 (a, data) VALUES (2,
+       CONCAT($data, $data, $data, $data, $data, $data));
+dec $i;
+}
+--sync_slave_with_master
+
+--connection master
+--connect(con1,localhost,root,,)
+
+--connection con1
+--send optimize table t1;
+
+--connection master
+
