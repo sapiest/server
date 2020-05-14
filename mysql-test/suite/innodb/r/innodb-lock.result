@@ -177,8 +177,6 @@ commit;
 connection con1;
 # No ER_LOCK_DEADLOCK; all rows returned
 pk	x
-1	1
-2	1
 3	1
 4	1
 5	1
@@ -201,8 +199,6 @@ connection con1;
 # No ER_LOCK_DEADLOCK; all rows returned
 pk	x
 1	2
-2	2
-3	2
 4	2
 5	2
 connection default;
@@ -223,8 +219,6 @@ commit;
 connection con1;
 # No ER_LOCK_DEADLOCK; all rows returned
 pk	x
-5	3
-4	3
 3	3
 2	3
 1	3
