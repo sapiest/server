@@ -206,7 +206,7 @@ ExecStartPre=@scriptdir@/mysql_install_db $MYSQLD_MULTI_INSTANCE
 # * MYSQLD_OPTS - user definable extras - not a replacement for my.cnf
 #
 # Note 1: Place $MYSQLD_OPTS at the very end for its options to take precedence.
-ExecStart=@sbindir@/mysqld $MYSQLD_MULTI_INSTANCE $MYSQLD_OPTS
+ExecStart=@sbindir@/mariadbd $MYSQLD_MULTI_INSTANCE $MYSQLD_OPTS
 
 @SYSTEMD_EXECSTARTPOST@
 

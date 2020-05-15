@@ -324,17 +324,17 @@ parse_arguments() {
       --mysqld[-_]version=*)
         if test -n "$val"
         then
-          MYSQLD="mysqld-$val"
+          MYSQLD="mariadbd-$val"
           PLUGIN_VARIANT="/$val"
         else
-          MYSQLD="mysqld"
+          MYSQLD="mariadbd"
         fi
         ;;
       --dry[-_]run) dry_run=1 ;;
       --nice=*) niceness="$val" ;;
       --nowatch|--no[-_]watch|--no[-_]auto[-_]restart) nowatch=1 ;;
       --open[-_]files[-_]limit=*) open_files="$val" ;;
-      --skip[-_]kill[-_]mysqld*) KILL_MYSQLD=0 ;;
+      --skip[-_]kill[-_]mariadbd*) KILL_MYSQLD=0 ;;
       --syslog) want_syslog=1 ;;
       --skip[-_]syslog) want_syslog=0 ;;
       --syslog[-_]tag=*) syslog_tag="$val" ;;
@@ -388,7 +388,7 @@ parse_arguments() {
 # LD_LIBRARY_PATH and stripped from the lib value.
 add_mysqld_ld_preload() {
   lib_to_add="$1"
-  log_notice "Adding '$lib_to_add' to LD_PRELOAD for mysqld"
+  log_notice "Adding '$lib_to_add' to LD_PRELOAD for mariadbd"
 
   case "$lib_to_add" in
     *' '*)
@@ -518,25 +518,25 @@ then
   # BASEDIR is already overridden on command line.  Do not re-set.
 
   # Use BASEDIR to discover le.
-  if test -x "$MY_BASEDIR_VERSION/libexec/mysqld"
+  if test -x "$MY_BASEDIR_VERSION/libexec/mariadbd"
   then
     ledir="$MY_BASEDIR_VERSION/libexec"
-  elif test -x "$MY_BASEDIR_VERSION/sbin/mysqld"
+  elif test -x "$MY_BASEDIR_VERSION/sbin/mariadbd"
   then
     ledir="$MY_BASEDIR_VERSION/sbin"
   else
     ledir="$MY_BASEDIR_VERSION/bin"
   fi
-elif test -x "$MY_PWD/bin/mysqld"
+elif test -x "$MY_PWD/bin/mariadbd"
 then
   MY_BASEDIR_VERSION="$MY_PWD"		# Where bin, share and data are
   ledir="$MY_PWD/bin"			# Where mysqld is
 # Check for the directories we would expect from a source install
-elif test -x "$MY_PWD/libexec/mysqld"
+elif test -x "$MY_PWD/libexec/mariadbd"
 then
   MY_BASEDIR_VERSION="$MY_PWD"		# Where libexec, share and var are
   ledir="$MY_PWD/libexec"		# Where mysqld is
-elif test -x "$MY_PWD/sbin/mysqld"
+elif test -x "$MY_PWD/sbin/mariadbd"
 then
   MY_BASEDIR_VERSION="$MY_PWD"		# Where sbin, share and var are
   ledir="$MY_PWD/sbin"			# Where mysqld is
@@ -546,7 +546,7 @@ else
   ledir='@libexecdir@'
 fi
 
-helper=`find_in_bin mysqld_safe_helper`
+helper=`find_in_bin mariadbd-safe-helper`
 print_defaults=`find_in_bin my_print_defaults`
 
 # Check if helper exists
@@ -639,7 +639,7 @@ if [ $want_syslog -eq 1 ]
 then
   if ! command -v logger > /dev/null
   then
-    log_error "--syslog requested, but no 'logger' program found.  Please ensure that 'logger' is in your PATH, or do not specify the --syslog option to mysqld_safe."
+    log_error "--syslog requested, but no 'logger' program found.  Please ensure that 'logger' is in your PATH, or do not specify the --syslog option to mariadbd-safe."
     exit 1
   fi
 fi
@@ -659,7 +659,7 @@ then
 
     # mysqld does not add ".err" to "--log-error=foo."; it considers a
     # trailing "." as an extension
-    
+
     if expr "$err_log" : '.*\.[^/]*$' > /dev/null
     then
         :
@@ -741,10 +741,10 @@ then
   chmod 755 $mysql_unix_port_dir
 fi
 
-# If the user doesn't specify a binary, we assume name "mysqld"
+# If the user doesn't specify a binary, we assume name "mariadbd"
 if test -z "$MYSQLD"
 then
-  MYSQLD=mysqld
+  MYSQLD=mariadbd
 fi
 
 if test ! -x "$ledir/$MYSQLD"
@@ -752,7 +752,7 @@ then
   log_error "The file $ledir/$MYSQLD
 does not exist or is not executable. Please cd to the mysql installation
 directory and restart this script from there as follows:
-./bin/mysqld_safe&
+./bin/mariadbd-safe&
 See https://mariadb.com/kb/en/mysqld_safe for more information"
   exit 1
 fi
@@ -846,7 +846,7 @@ then
   then
     if @FIND_PROC@
     then    # The pid contains a mysqld process
-      log_error "A mysqld process already exists"
+      log_error "A mariadbd process already exists"
       exit 1
     fi
   fi
@@ -856,7 +856,7 @@ then
     log_error "Fatal error: Can't remove the pid file:
 $pid_file
 Please remove it manually and start $0 again;
-mysqld daemon not started"
+mariadbd daemon not started"
     exit 1
   fi
 fi
@@ -1081,7 +1081,7 @@ do
     fi
   fi
 
-  log_notice "mysqld restarted"
+  log_notice "mariadbd restarted"
   if test -n "$crash_script"
   then
     crash_script_output=`$crash_script 2>&1`
@@ -1089,4 +1089,4 @@ do
   fi
 done
 
-log_notice "mysqld from pid file $pid_file ended"
+log_notice "mariadbd from pid file $pid_file ended"
