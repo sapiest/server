@@ -177,7 +177,7 @@ operator<<(std::ostream& out, const lock_rec_t& lock)
 
 inline
 const char*
-type_string(ib_uint32_t type_mode)
+type_string(ulint type_mode)
 {
 	switch (type_mode & LOCK_TYPE_MASK) {
 	case LOCK_REC:
@@ -193,7 +193,7 @@ type_string(ib_uint32_t type_mode)
 @return human readable string */
 inline
 std::string
-type_mode_string(ib_uint32_t type_mode)
+type_mode_string(ulint type_mode)
 {
 	std::ostringstream sout;
 	lock_mode mode = static_cast<enum lock_mode>(type_mode & LOCK_MODE_MASK);
