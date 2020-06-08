@@ -37,7 +37,10 @@ void execute_after_task_callback()
 #endif
 
   task::task(callback_func func, void* arg, task_group* group) :
-    m_func(func), m_arg(arg), m_group(group) {}
+    m_func(func), m_arg(arg), m_group(group)
+    {
+      count_tasks = 0;
+    }
 
   void task::execute()
   {
@@ -52,6 +55,7 @@ void execute_after_task_callback()
       m_func(m_arg);
       dbug_execute_after_task_callback();
       release();
+      count_tasks++;
     }
   }
 

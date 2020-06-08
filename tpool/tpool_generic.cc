@@ -28,6 +28,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111 - 1301 USA*/
 #include <thread>
 #include <vector>
 #include "tpool.h"
+#include "hill_climbing.h"
+
+#include <time.h>
+#include <stdio.h>
+
 #include <assert.h>
 #include <my_global.h>
 #include <my_dbug.h>
@@ -211,6 +216,9 @@ class thread_pool_generic : public thread_pool
 
   /** True, if threadpool is being shutdown, false otherwise */
   bool m_in_shutdown;
+
+  /** Flag for show log info of thread count in stderr */
+  bool m_is_logging_thread_count = false;
 
   /** time point when timer last ran, used as a coarse clock. */
   std::chrono::system_clock::time_point m_timestamp;
@@ -516,6 +524,8 @@ void thread_pool_generic::worker_main(worker_data *thread_var)
   while (get_task(thread_var, &task) && task)
   {
     task->execute();
+    hill_climbing_mgr::m_thread_pool_completion_count = task->count_tasks;
+    //maybe_wake_or_create_thread();
   }
 
   if (m_worker_destroy_callback)
@@ -575,13 +585,14 @@ void thread_pool_generic::maintainence()
   maybe_wake_or_create_thread();
 
   size_t thread_cnt = (int)thread_count();
-  if (m_last_activity == m_tasks_dequeued + m_wakeups &&
-      m_last_thread_count <= thread_cnt && m_active_threads.size() == thread_cnt)
-  {
-    // no progress made since last iteration. create new
-    // thread
-    add_thread();
-  }
+//  if (m_last_activity == m_tasks_dequeued + m_wakeups &&
+//      m_last_thread_count <= thread_cnt &&
+//      m_active_threads.size() == thread_cnt)
+//  {
+//    // no progress made since last iteration. create new
+//    // thread
+//    add_thread();
+//  }
   m_last_activity = m_tasks_dequeued + m_wakeups;
   m_last_thread_count= thread_cnt;
 }
@@ -611,10 +622,10 @@ bool thread_pool_generic::add_thread()
 {
   size_t n_threads = thread_count();
 
-  if (n_threads >= m_max_threads)
+  if (n_threads >= hill_climbing_mgr::m_max_threads)
     return false;
 
-  if (n_threads >= m_min_threads)
+  if (n_threads >= hill_climbing_mgr::m_min_threads)
   {
     auto now = std::chrono::system_clock::now();
     if (now - m_last_thread_creation <
@@ -694,10 +705,17 @@ thread_pool_generic::thread_pool_generic(int min_threads, int max_threads) :
   m_maintaince_timer_task()
 {
 
-  if (m_max_threads < m_concurrency)
-    m_concurrency = m_max_threads;
-  if (m_min_threads > m_concurrency)
-    m_concurrency = min_threads;
+  hill_climbing_mgr::hill_climbing_instance.initialize(m_is_logging_thread_count);
+  hill_climbing_mgr::hill_climbing_instance.force_change(min_threads,
+                                                         INITIALIZING);
+
+  hill_climbing_mgr::m_min_threads = min_threads;
+  hill_climbing_mgr::m_max_threads = max_threads;
+
+  if (hill_climbing_mgr::m_max_threads < m_concurrency)
+    m_concurrency = hill_climbing_mgr::m_max_threads;
+  if (hill_climbing_mgr::m_min_threads > m_concurrency)
+    m_concurrency = hill_climbing_mgr::m_min_threads;
   if (!m_concurrency)
     m_concurrency = 1;
 
@@ -716,13 +734,40 @@ void thread_pool_generic::maybe_wake_or_create_thread()
   DBUG_ASSERT(m_active_threads.size() >= static_cast<size_t>(m_long_tasks_count + m_waiting_task_count));
   if (m_active_threads.size() - m_long_tasks_count - m_waiting_task_count > m_concurrency)
     return;
-  if (!m_standby_threads.empty())
+
+  /** get the number of completed tasks */
+  auto num_completion = hill_climbing_mgr::m_thread_pool_completion_count -
+                       hill_climbing_mgr::PriorCompletedWorkRequests;
+
+  auto start_time = hill_climbing_mgr::current_task_start_time;
+
+  auto timepoint = std::chrono::system_clock::now();
+  auto end_time =
+      std::chrono::time_point_cast<std::chrono::milliseconds>(timepoint)
+          .time_since_epoch()
+          .count();
+
+  /** time spent on a task */
+  auto elapsed = end_time - start_time;
+
+  /** check to reduce the number of updates */
+  if (elapsed * 1000 > m_timer_interval.count() / 2)
   {
-    wake(WAKE_REASON_TASK);
-  }
-  else
-  {
-    add_thread();
+    /** get the desired concurrency */
+    m_concurrency = hill_climbing_mgr::hill_climbing_instance.update(
+        m_active_threads.size(), elapsed, num_completion, &m_timer_interval);
+        hill_climbing_mgr::current_count_threads += 1;
+        /** try to add new thread every check */
+        if (!m_standby_threads.empty())
+        {
+          wake(WAKE_REASON_TASK);
+        }
+        else
+        {
+          add_thread();
+        }
+    hill_climbing_mgr::current_task_start_time = end_time;
+    hill_climbing_mgr::PriorCompletedWorkRequests = hill_climbing_mgr::m_thread_pool_completion_count;
   }
 }
 

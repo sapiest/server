@@ -88,6 +88,7 @@ public:
   callback_func get_func() { return m_func; }
   virtual void execute();
   virtual ~task() {}
+  unsigned long count_tasks;
 };
 
 class waitable_task :public task
@@ -186,6 +187,7 @@ extern aio *create_simulated_aio(thread_pool *tp);
 */
 void set_after_task_callback(callback_func_np cb);
 void execute_after_task_callback();
+
 #define dbug_execute_after_task_callback() execute_after_task_callback()
 #else
 #define dbug_execute_after_task_callback() do{}while(0)

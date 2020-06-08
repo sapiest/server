@@ -709,7 +709,7 @@ void srv_thread_pool_init()
   DBUG_ASSERT(!srv_thread_pool);
 
 #if defined (_WIN32)
-  srv_thread_pool= tpool::create_thread_pool_win();
+  srv_thread_pool= tpool::create_thread_pool_generic();//tpool::create_thread_pool_win();
 #else
   srv_thread_pool= tpool::create_thread_pool_generic();
 #endif

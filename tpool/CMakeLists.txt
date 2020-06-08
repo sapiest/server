@@ -2,7 +2,7 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
 IF(WIN32)
   SET(EXTRA_SOURCES tpool_win.cc aio_win.cc)
 ELSE()
-  SET(EXTRA_SOURCES aio_linux.cc)
+    SET(EXTRA_SOURCES aio_linux.cc)
 ENDIF()
 
 IF(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -23,6 +23,9 @@ ADD_LIBRARY(tpool STATIC
   task_group.cc
   task.cc
   wait_notification.cc
+        hill_climbing.h
+        hill_climbing.cpp
+  complex.h
   ${EXTRA_SOURCES}
 )
 
